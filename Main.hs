@@ -2,7 +2,7 @@
 
 module Main where
 
-import Paths_WMSigner (version)
+--import Paths_WMSigner (version)
 import Data.Either (either)
 import Data.Functor ((<$>))
 import Data.Version (showVersion)
@@ -37,7 +37,7 @@ commandLineParse args = processArgument args newSettings
     processArgument [] settings = return settings
     processArgument (arg:rest) settings
       | arg `elem` ["-h", "--help"] = do
-        putStrLn $ "WMSigner, Version " ++ ( showVersion version ) ++ ", 2014\n"
+        --putStrLn $ "WMSigner, Version " ++ ( showVersion version ) ++ ", 2014\n"
         putStrLn " -p   [--password]   : Password for key_file"
         putStrLn " -w   [--wmid]       : 123456789012 : WMID (12 digits)"
         putStrLn " -s   [--sign]       : string_to_signification : signing specified string"
@@ -47,7 +47,7 @@ commandLineParse args = processArgument args newSettings
         putStrLn " -h   [--help]       : Help (this srceen)"
         putStrLn " -v   [--version]    : Version of program\n"
         exitSuccess
-      | arg `elem` ["-v", "--version"] = putStrLn ( "WMSigner, Version " ++ ( showVersion version ) ++ ", 2014" ) >> exitSuccess
+      -- | arg `elem` ["-v", "--version"] = putStrLn ( "WMSigner, Version " ++ ( showVersion version ) ++ ", 2014" ) >> exitSuccess
       | arg `elem` ["-p", "--password"] = if null rest then fatalError "Password not defined!" else next settings { szPwdCL = value }
       | arg `elem` ["-w", "--wmid"] = if null rest then fatalError "WMID Not defined!" else next settings { szLoginCL = value }
       | arg `elem` ["-s", "--sign"] = if null rest then fatalError "String to signification not defined!" else next settings { szStringToSign = value }
@@ -99,7 +99,24 @@ loadIniFile fName settings =
         { szLoginCL       = ( null $ szLoginCL settings ) ? login :? szLoginCL settings
         , szPwdCL         = ( null $ szPwdCL settings ) ? pwd :? szPwdCL settings
         , szKeyFileNameCL = isKWMFileFromCL settings ? szKeyFileNameCL settings :? fileName
-        }  
+        }
+
+normStr :: String -> String
+normStr [] = []
+normStr (a:[]) = if a `elem` "\EOT\n\r" then [] else [a]
+normStr str = takeWhile (\ e -> not $ e `elem` "\NUL\EOT") $ filter (/='\r') $ reverse $ 
+  ( a `elem` "\EOT\n\r" ? '\NUL' :? a ) : ( b `elem` "\EOT\n\r" ? '\NUL' :? b ) :  c
+  where (a:b:c) = reverse str
+
+readConsoleString :: IO String
+readConsoleString = reverse <$> go ""
+  where 
+    go contents = getChar >>= process
+      where
+        process c 
+          | c == '\r' = go contents
+          | c `elem` "\EOT\NUL" = go contents
+          | otherwise = go ( c:contents )
 
 main :: IO ()
 main = do
@@ -116,3 +133,7 @@ main = do
 
   --  else
     -- loadIniFile szIniFileFull settings
+  --if null $ szStringToSign settings
+  --  szIn = normStr settings
+  --else
+  --  szIn = normStr readConsoleString
