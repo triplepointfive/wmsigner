@@ -1,34 +1,27 @@
-{-# LANGUAGE GADTs, RecordWildCards #-}
+{-# LANGUAGE GADTs #-}
 
 module Main where
 
---import Paths_WMSigner (version)
-import Data.Either (either)
-import Data.Functor ((<$>))
-import Data.Version (showVersion)
-import System.Directory (doesFileExist)
-import System.Environment (getProgName, getArgs)
-import System.Exit (exitSuccess, exitFailure)
+-- import           Paths_WMSigner (version)
+import           Data.Either (either)
+import           Data.Functor ((<$>))
+import           Data.Version (showVersion)
+import           System.Directory (doesFileExist)
+import           System.Environment (getProgName, getArgs)
+import           System.Exit (exitSuccess, exitFailure)
 
-import Data.ByteString.Base64 (decode)
+import           Data.ByteString.Base64 (decode)
 import qualified Data.ByteString.Char8 as BS (pack, empty, length, ByteString)
+
+import           Signer
+import           Utils
+import           WMSettings
 
 fatalError :: String -> IO a
 fatalError errorMessage = putStrLn errorMessage >> exitFailure
 
-data WMSetting where
-  WMSetting :: { szLoginCL        :: String
-               , szPwdCL          :: String
-               , szIniFileFull    :: String
-               , szKeyFileNameCL  :: String
-               , szKeyData        :: BS.ByteString
-               , szStringToSign   :: String
-               , key64Flag        :: Bool
-               , isKWMFileFromCL  :: Bool } -> WMSetting
-  deriving Show
-
-newSettings :: WMSetting
-newSettings = WMSetting "" "" "" "" BS.empty "" False False
+printError :: Int -> IO a
+printError errorCode = fatalError ( "Error " ++ show errorCode )
 
 commandLineParse :: [String] -> IO WMSetting
 commandLineParse args = processArgument args newSettings
@@ -53,7 +46,7 @@ commandLineParse args = processArgument args newSettings
       | arg `elem` ["-s", "--sign"] = if null rest then fatalError "String to signification not defined!" else next settings { szStringToSign = value }
       | arg `elem` ["-i", "--ini-path"] = if null rest then fatalError "Ini file name (with path) not defined!" else next settings { szIniFileFull = value }
       | arg `elem` ["-k", "--key-path"] = if null rest then fatalError "Key file not defined!" else next settings { szKeyFileNameCL = value, isKWMFileFromCL = True }
-      | arg `elem` ["-K64", "--key-base64"] = do
+      | arg `elem` ["-K64", "--key-base64"] =
         if null rest then fatalError "KEY_STRING in Base64 code not defined!"
           else 
             if length value /= 220 then fatalError "Key string has illegal length!"
@@ -66,16 +59,7 @@ commandLineParse args = processArgument args newSettings
         value = head rest
 
 fullSettings :: WMSetting -> Bool
-fullSettings settings = ( key64Flag settings || isKWMFileFromCL settings ) && ( not $ null $ szLoginCL settings ) && ( not $ null $ szLoginCL settings )
-
-data Cond a = a :? a
- 
-infixl 0 ?
-infixl 1 :?
- 
-(?) :: Bool -> Cond a -> a
-True  ? (x :? _) = x
-False ? (_ :? y) = y
+fullSettings settings = ( key64Flag settings || isKWMFileFromCL settings ) && not ( null $ szLoginCL settings ) && not ( null $ szLoginCL settings )
 
 loadIniFile :: FilePath -> WMSetting -> IO WMSetting
 loadIniFile fName settings = 
@@ -84,9 +68,6 @@ loadIniFile fName settings =
     process False = printError 20
   in doesFileExist fName >>= process
   where
-    printError :: Int -> IO a
-    printError errorCode = fatalError ( "Error " ++ show errorCode )
-
     validateFile :: [String] -> IO WMSetting
     validateFile [] = printError (-4)
     validateFile ("":_) = printError (-4)
@@ -96,15 +77,15 @@ loadIniFile fName settings =
     validateFile (_:_:"":[]) = printError (-6)
     validateFile (login:pwd:fileName:_) = 
       return $ settings 
-        { szLoginCL       = ( null $ szLoginCL settings ) ? login :? szLoginCL settings
-        , szPwdCL         = ( null $ szPwdCL settings ) ? pwd :? szPwdCL settings
+        { szLoginCL       = null ( szLoginCL settings ) ? login :? szLoginCL settings
+        , szPwdCL         = null ( szPwdCL settings ) ? pwd :? szPwdCL settings
         , szKeyFileNameCL = isKWMFileFromCL settings ? szKeyFileNameCL settings :? fileName
         }
 
 normStr :: String -> String
 normStr [] = []
 normStr (a:[]) = if a `elem` "\EOT\n\r" then [] else [a]
-normStr str = takeWhile (\ e -> not $ e `elem` "\NUL\EOT") $ filter (/='\r') $ reverse $ 
+normStr str = takeWhile (`notElem` "\NUL\EOT") $ filter (/='\r') $ reverse $ 
   ( a `elem` "\EOT\n\r" ? '\NUL' :? a ) : ( b `elem` "\EOT\n\r" ? '\NUL' :? b ) :  c
   where (a:b:c) = reverse str
 
@@ -126,14 +107,15 @@ main = do
     print "Null found"
   else do
     settings <- commandLineParse args
-    print settings
-  --if fullSettings settings
-  --  then
-    --isIgnoreIniFile = True
-
-  --  else
-    -- loadIniFile szIniFileFull settings
-  --if null $ szStringToSign settings
-  --  szIn = normStr settings
-  --else
-  --  szIn = normStr readConsoleString
+    if fullSettings settings then
+      signForSettings settings
+    else
+      loadIniFile szIniFileFull settings >>= signForSettings
+  where
+    signForSettings :: WMSetting -> IO ()
+    signForSettings settings = ( if null $ szStringToSign settings 
+      then
+        ( normStr <$> readConsoleString ) >>= sign ( newSigner settings )
+      else
+        sign ( newSigner settings ) ( normStr $ szStringToSign settings )
+      ) >>= either printError putStrLn
