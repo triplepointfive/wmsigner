@@ -6,6 +6,7 @@ import           Data.Bits
 import           Data.Binary
 import           Data.Binary.Get
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy.Internal as B (ByteString)
 import           Data.Word
 import           GHC.Generics (Generic)
 
@@ -15,7 +16,7 @@ data Key where
 newKey :: Key
 newKey = undefined
 
-loadFromBuffer :: Key -> Int -> Bool
+loadFromBuffer :: Key -> KeyFileFormat -> Int -> IO Bool
 loadFromBuffer = undefined
 
 keyValid :: Key -> Bool

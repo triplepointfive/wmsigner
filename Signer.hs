@@ -3,7 +3,9 @@
 module Signer where
 
 import           Control.Monad.State
-import qualified Data.ByteString as B (ByteString, readFile, length, empty)
+import           Data.Binary (decode)
+import qualified Data.ByteString.Lazy.Internal as B (ByteString)
+import qualified Data.ByteString.Lazy as B (readFile, length, empty)
 import           Data.Char (ord)
 import           Data.Functor ((<$>))
 import           System.Random (randomIO)
@@ -45,6 +47,8 @@ io = liftIO
 us2sz :: String -> Int -> String
 us2sz = undefined
 
+secureKeyByIDPHalf :: B.ByteString -> Int -> StateT Signer IO Bool
+secureKeyByIDPHalf = undefined
 -- secureKeyByIDPWHalf :: Signer -> ByteString -> Int -> Bool
 -- secureKeyByIDPWHalf singer buf dwBuf =
 --   if wSignFlag keyData == 0
@@ -68,6 +72,8 @@ us2sz = undefined
 --   where
 --     keyData = decode buf :: KeyFileFormat
 
+secureKeyByIDPW :: B.ByteString -> Int -> StateT Signer IO Bool
+secureKeyByIDPW = undefined
 -- secureKeyByIDPW :: Signer -> ByteString -> Int -> Bool
 -- secureKeyByIDPW singer buf dwBuf =
 --   if wSignFlag keyData == 0
@@ -88,39 +94,41 @@ us2sz = undefined
 --     keyData = decode buf :: KeyFileFormat
 
 loadKeys :: StateT Signer IO Bool
-loadKeys = undefined
---   if not ( key64 signer ) && not ( ignoreKeyFile signer )
---     then
---       pBufRead <- B.readFile ( szKeyFileName signer )
---       processKey ( B.length pBufRead == 164 ) pBufRead
---     else
---       processKey True ( szKeyData signer )
---   where
---     bNotOldFmt = false
-
---     processKey bKeysReaded pBufRead = do
---       if bKeysReaded
---         then
---         ------------
---           secureKeyByIDPWHalf signer pBufRead 164
---           errLoadKey = loadFromBuffer (keys signer) (key { wSignFlag = 0 }) 164
---           if errLoadKey
---             then
---               secureKeyByIDPWHalf signer pBufRead 164 -- restore buffer
---               secureKeyByIDPW signer pBufRead 164
---               --signer {keys = keys signer { wSignFlag = 0 } }
---               errLoadKey = loadFromBuffer (keys signer) (key { wSignFlag = 0 }) 164
---             else
---               signer {keys = keys signer { wSignFlag = 0 } }
---           if not errLoadKey
---             True
---           else
---             signer { keys = newKey }
---             m_siErrorCode = -3
---             False
---      else
---         return bKeysReaded
---       where key = decode pBufRead :: KeyFileFormat
+loadKeys = do
+  signer <- get
+  if not ( key64 signer ) && not ( ignoreKeyFile signer )
+    then do
+      pBufRead <- io $ B.readFile ( szKeyFileName signer )
+      processKey ( B.length pBufRead == 164 ) pBufRead
+    else
+      processKey True ( keyData signer )
+  where
+    processKey :: Bool -> B.ByteString -> StateT Signer IO Bool
+    processKey bKeysReaded pBufRead = do
+      signer <- get
+      if bKeysReaded
+        then do
+          secureKeyByIDPHalf pBufRead 164
+          errLoadKey <- io $ loadFromBuffer (keys signer) (key { wSignFlag = 0 }) 164
+          if errLoadKey
+            then do
+              secureKeyByIDPHalf pBufRead 164 -- restore buffer
+              secureKeyByIDPW pBufRead 164
+              --signer {keys = keys signer { wSignFlag = 0 } }
+              errLoadKey <- io $ loadFromBuffer (keys signer) (key { wSignFlag = 0 }) 164
+              if not errLoadKey
+                then
+                  return True
+                else do
+                  put $ signer { keys = newKey, m_siErrorCode = -3 }
+                  return False
+            else
+              -- put $ signer { keys = keys signer { wSignFlag = 0 } }
+              return False
+        else
+          return True
+      where
+        key = decode pBufRead :: KeyFileFormat
 
 sign :: Signer -> String -> IO (Either Int String)
 sign signer str = runStateT signing signer >>= \ (e, s) -> return $ Left 0
