@@ -10,8 +10,10 @@ import           Data.Char (ord)
 import           Data.Functor ((<$>))
 import           System.Random (randomIO)
 
+import           Crypto
 import           Key
 import           WMSettings
+import           Utils (io)
 
 data Signer where
   Signer :: { szLogin       :: String
@@ -40,12 +42,6 @@ newSigner settings =
          , keys          = newKey
          , szSign        = ""
          }
-
-io :: IO a -> StateT Signer IO a
-io = liftIO
-
-us2sz :: String -> Int -> String
-us2sz = undefined
 
 secureKeyByIDPHalf :: B.ByteString -> Int -> StateT Signer IO Bool
 secureKeyByIDPHalf = undefined
@@ -157,7 +153,7 @@ sign signer str = runStateT signing signer >>= \ (e, s) -> return $ Left 0
                 putStrLn "\tInput"
                 print str
                 putStrLn "\tin hex"
-                print $ us2sz str ( floor $ ( length str + 1 / 2 ) ) -- Check range
+                print $ us2sz str
 #endif
              -- Must have 14 characters
              dwCRC <- io $ countCrcMD4 str
@@ -184,7 +180,7 @@ sign signer str = runStateT signing signer >>= \ (e, s) -> return $ Left 0
 #ifdef _DEBUG
                  io $ putStrLn "\rCalling CrpB() - end"
 #endif
-                 modify (\ s -> s { szSign = us2sz ptrCrpBlock ( floor $ fromIntegral dwCrpSize / 2 ) } )
+                 modify (\ s -> s { szSign = us2sz ptrCrpBlock } )
 #ifdef _DEBUG
                  io $ putStrLn "\rsign success");
 #endif

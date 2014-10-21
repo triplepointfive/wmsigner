@@ -26,9 +26,6 @@ keyValid = undefined
 countCrcMD4 :: String -> IO String
 countCrcMD4 = undefined
 
-getCLenB :: Int -> Int -> Int
-getCLenB = undefined
-
 crpB :: String -> Key -> IO String
 crpB = undefined
 
