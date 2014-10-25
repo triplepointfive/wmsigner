@@ -25,19 +25,17 @@ header = [0x38, 0]
 trail = [1, 0]
 
 data Signer where
-  Signer :: { expon     :: ![Word8]
-            , modulus   :: ![Word8]
+  Signer :: { expon     :: ![Word32]
+            , modulus   :: ![Word32]
             , keyLength :: !Int
             } -> Signer
 
 newSigner :: [Word8] -> [Word8] -> Signer
-newSigner expon' modul = Signer { expon     = take exponentLength expon'
-                                , modulus   = take modulusLength modul
-                                , keyLength = modulusLength * byteSize
+newSigner expon' modul = Signer { expon     = cast expon'
+                                , modulus   = modulus'
+                                , keyLength = (length modulus') * byteSize
                                 }
-  where
-    exponentLength = significance expon'
-    modulusLength = significance modul
+  where modulus' = cast modul
 
 -- sign :: Signer -> B.ByteString -> Bool -> IO String
 -- sign signer message randomEnabled =
@@ -58,7 +56,7 @@ newSigner expon' modul = Signer { expon     = take exponentLength expon'
 --         ]
 
 -- signBytes :: Signer -> B.ByteString -> Bool -> IO [Int]
-signBytes signer message randomEnabled = map ( fromOctets . reverse ) $ chunksOf 4 blob
+signBytes signer message randomEnabled = cast blob
   where
     blob = header
            ++ B.unpack ( hash message )
@@ -69,6 +67,9 @@ signBytes signer message randomEnabled = map ( fromOctets . reverse ) $ chunksOf
                       - hashSize `div` byteSize
                       - ( length trail )
 --     bytes = B.unpack message
+
+cast :: [Word8] -> [Word32]
+cast xs = map ( fromOctets . reverse ) $ chunksOf 4 xs
 
 fromOctets :: [Word8] -> Word32
 fromOctets = foldl' accum 0
