@@ -1,5 +1,6 @@
 module Montgomery where
 
+import           Control.Lens ((&), ix, (.~))
 import           Data.Bits (shiftL, (.&.), Bits, shiftR)
 import           Data.Word (Word8, Word32)
 
@@ -41,28 +42,34 @@ exponentation x e m = undefined
 --           and mQ = -m^1 mod b.
 -- OUTPUT: x * y * R^-1 mod m.
 multiplication :: [Word32] -> [Word32] -> [Word32] -> Word32 -> [Word32]
-multiplication x y m mQ = foldl iter a' [0..n-1]
+multiplication x y m mQ = foldl iter a0 [0..n-1]
   where
     n = length m -- significance?
     -- 1. A = 0. (Notation: A = (a[n] a[n-1] ... a[1] a[0]){b})
-    a' = replicate (n + 1) 0
+    a0 = replicate (n + 1) 0
     -- 2. For i from 0 to (n - 1) do the following:
     iter :: [Word32] -> Int -> [Word32]
     iter a i =
-        let xy, um, temp, carry :: Word32
-            xy    = ((x !! i) .&. longMask) * (head y .&. longMask)
-            um    = u * (head m .&. longMask)
-            temp  = (head a .&. longMask) + (xy .&. longMask) + (um .&. longMask)
-            carry = (xy `shiftR` intSize) + (um `shiftR` intSize) + (temp `shiftR` intSize) -- logical shift?
-            (_, _, _, carry') = foldl proc (xy, um, temp, carry) [1..n-1]
-        in  undefined
+      let xy, um, temp, carry :: Word32
+          xy    = ((x !! i) .&. longMask) * (head y .&. longMask)
+          um    = u * (head m .&. longMask)
+          temp  = (head a .&. longMask) + (xy .&. longMask) + (um .&. longMask)
+          carry = (xy `shiftR` intSize) + (um `shiftR` intSize) + (temp `shiftR` intSize) -- logical shift?
+          (_, _, _, carry', a') = foldl proc (xy, um, temp, carry, a) [1..n-1]
+          carry'' = carry' + (( a' !! n ) .&. longMask)
+      in ( a' & ix ( n - 1 ) .~ carry'' ) & ix n .~ ( carry'' `shiftR` intSize ) -- logical shift?
       where
         -- 2.1 u_i = (a[0] + x[i] * y[0]) * mQ mod b.
         u :: Word32
         u = (( (head a) + ((((x !! i) .&. longMask) * ((head y) .&. longMask)) .&. longMask)) * mQ ) .&. longMask
         -- 2.2 A = (A + x[i] * y + u_i * m) / b.
-        proc :: (Word32, Word32, Word32, Word32) -> Int -> (Word32, Word32, Word32, Word32)
-        proc (xy, um, temp, carry) pos = undefined
+        proc :: (Word32, Word32, Word32, Word32, [Word32]) -> Int -> (Word32, Word32, Word32, Word32, [Word32])
+        proc (xy', um', temp', carry', a') pos = (xy, um, temp, carry, a' & ix ( pos - 1 ) .~ temp)
+          where
+            xy = ((x !! i) .&. longMask) * ((y !! pos) .&. longMask)
+            um = u * ((m !! pos) .&. longMask)
+            temp = ((a !! pos) .&. longMask) + (xy .&. longMask)  + (um .&. longMask)  + (carry' .&. longMask)
+            carry = (carry' `shiftR` 32) + (xy `shiftR` intSize) + (um `shiftR` intSize) + (temp `shiftR` intSize)
 
 
 inverse :: ( Num a, Bits a ) => a -> a
