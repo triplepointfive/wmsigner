@@ -2,13 +2,13 @@ module Montgomery where
 
 import           Control.Lens ((&), ix, (.~))
 import           Data.Bits (shiftL, (.&.), Bits, shiftR)
-import           Data.Word (Word8, Word32)
+import           Data.Word (Word8, Word32, Word64)
 
 import           Algebra (significance)
 
 intSize :: Int
 intSize = 32
-bitMask, longMask :: Word32
+-- bitMask, longMask :: Word32
 bitMask = 0x80000000
 longMask = 0xFFFFFFFF
 
@@ -29,8 +29,8 @@ exponentation x e m = undefined
     eLength = significance e
     mLenght = significance m
     -- 1. temp = Mont(x, R^2 mod m), A = R mod m.
-    temp = multiplication x r m mQ
-      where r = replicate ( length m ) 0 ++ [1]
+--     temp = multiplication x r m mQ
+--       where r = replicate ( length m ) 0 ++ [1]
 
 -- Algorithm Montgomery multiplication
 -- INPUT: integers
@@ -41,36 +41,41 @@ exponentation x e m = undefined
 --           R = b^n with gcd(m, b) = 1,
 --           and mQ = -m^1 mod b.
 -- OUTPUT: x * y * R^-1 mod m.
-multiplication :: [Word32] -> [Word32] -> [Word32] -> Word32 -> [Word32]
-multiplication x y m mQ = foldl iter a0 [0..n-1]
+multiplication :: [Int] -> [Int] -> [Int] -> Int -> [Int]
+multiplication x y m mQ = iter a0 0
+    --foldl iter a0 [0..n-1]
   where
     n = length m -- significance?
     -- 1. A = 0. (Notation: A = (a[n] a[n-1] ... a[1] a[0]){b})
     a0 = replicate (n + 1) 0
     -- 2. For i from 0 to (n - 1) do the following:
-    iter :: [Word32] -> Int -> [Word32]
+    iter :: [Int] -> Int -> [Int]
     iter a i =
-      let xy, um, temp, carry :: Word32
+      let xy, um, temp, carry :: Int
           xy    = ((x !! i) .&. longMask) * (head y .&. longMask)
           um    = u * (head m .&. longMask)
           temp  = (head a .&. longMask) + (xy .&. longMask) + (um .&. longMask)
-          carry = (xy `shiftR` intSize) + (um `shiftR` intSize) + (temp `shiftR` intSize) -- logical shift?
+          carry = (xy `logicalShiftR` intSize) + (um `logicalShiftR` intSize) + (temp `logicalShiftR` intSize)
           (_, _, _, carry', a') = foldl proc (xy, um, temp, carry, a) [1..n-1]
-          carry'' = carry' + (( a' !! n ) .&. longMask)
-      in ( a' & ix ( n - 1 ) .~ carry'' ) & ix n .~ ( carry'' `shiftR` intSize ) -- logical shift?
+--           carry'' = carry' + (( a' !! n ) .&. longMask)
+          carry'' = carry + (( a' !! n ) .&. longMask)
+      in [carry'']
+        --( a' & ix ( n - 1 ) .~ carry'' ) & ix n .~ ( carry'' `logicalShiftR` intSize )
       where
         -- 2.1 u_i = (a[0] + x[i] * y[0]) * mQ mod b.
-        u :: Word32
+        u :: Int
         u = (( (head a) + ((((x !! i) .&. longMask) * ((head y) .&. longMask)) .&. longMask)) * mQ ) .&. longMask
         -- 2.2 A = (A + x[i] * y + u_i * m) / b.
-        proc :: (Word32, Word32, Word32, Word32, [Word32]) -> Int -> (Word32, Word32, Word32, Word32, [Word32])
+        proc :: (Int, Int, Int, Int, [Int]) -> Int -> (Int, Int, Int, Int, [Int])
         proc (xy', um', temp', carry', a') pos = (xy, um, temp, carry, a' & ix ( pos - 1 ) .~ temp)
           where
             xy = ((x !! i) .&. longMask) * ((y !! pos) .&. longMask)
             um = u * ((m !! pos) .&. longMask)
             temp = ((a !! pos) .&. longMask) + (xy .&. longMask)  + (um .&. longMask)  + (carry' .&. longMask)
-            carry = (carry' `shiftR` 32) + (xy `shiftR` intSize) + (um `shiftR` intSize) + (temp `shiftR` intSize)
+            carry = (carry' `logicalShiftR` 32) + (xy `logicalShiftR` intSize) + (um `logicalShiftR` intSize) + (temp `logicalShiftR` intSize)
 
+logicalShiftR :: Int -> Int -> Int
+logicalShiftR x i = fromIntegral ((fromIntegral x :: Word64) `shiftR` i) :: Int
 
 inverse :: ( Num a, Bits a ) => a -> a
 inverse value = -1 * ( iterate (\t -> t * ( 2 - value * t) ) temp !! 4 )

@@ -20,14 +20,14 @@ executable WMSigner
     other-modules:       Signer, Montgomery, Algebra
     build-depends:       base >=4.6 && <4.8, base64-bytestring >= 1.0.0.0, bytestring >= 0.10.4.0,
                          directory >= 1.0.0.0, cryptohash, base64-bytestring == 1.0.0.1, binary == 0.5.1.1,
-                         random == 1.0.1.1, mtl == 2.1.2, split >= 0.2, lens >= 1.3
+                         random == 1.0.1.1, mtl == 2.1.2, split >= 0.2, lens == 4.4.0.2
     hs-source-dirs:      src
     default-language:    Haskell2010
 
 Test-Suite test-WMSigner
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
-    build-depends:    base, hspec
+    build-depends:    base, hspec, lens == 4.4.0.2
     buildable:        True
     cpp-options:      -DTEST_MODE=true
     hs-source-dirs:   src test
