@@ -2,13 +2,14 @@ module Montgomery where
 
 import           Control.Lens ((&), ix, (.~))
 import           Data.Bits (shiftL, (.&.), Bits, shiftR)
+import           Data.Int (Int32)
 import           Data.Word (Word8, Word32, Word64)
 
 import           Algebra (significance)
 
 intSize :: Int
 intSize = 32
--- bitMask, longMask :: Word32
+bitMask, longMask :: Int
 bitMask = 0x80000000
 longMask = 0xFFFFFFFF
 
@@ -41,38 +42,44 @@ exponentation x e m = undefined
 --           R = b^n with gcd(m, b) = 1,
 --           and mQ = -m^1 mod b.
 -- OUTPUT: x * y * R^-1 mod m.
-multiplication :: [Int] -> [Int] -> [Int] -> Int -> [Int]
-multiplication x y m mQ = iter a0 0
-    --foldl iter a0 [0..n-1]
+multiplication :: [Int32] -> [Int32] -> [Int32] -> Int32 -> [Int32]
+multiplication x y m mQ = foldl iter a0 [0..n-1]
   where
     n = length m -- significance?
     -- 1. A = 0. (Notation: A = (a[n] a[n-1] ... a[1] a[0]){b})
     a0 = replicate (n + 1) 0
     -- 2. For i from 0 to (n - 1) do the following:
-    iter :: [Int] -> Int -> [Int]
+    iter :: [Int32] -> Int -> [Int32]
     iter a i =
       let xy, um, temp, carry :: Int
-          xy    = ((x !! i) .&. longMask) * (head y .&. longMask)
-          um    = u * (head m .&. longMask)
-          temp  = (head a .&. longMask) + (xy .&. longMask) + (um .&. longMask)
+          xy    = ((fromIntegral $ x !! i) .&. longMask) * ((fromIntegral $ head y) .&. longMask)
+          um    = u * ((fromIntegral $ head m) .&. longMask)
+          temp  = ((fromIntegral $ head a) .&. longMask) + (xy .&. (fromIntegral longMask)) + (um .&. (fromIntegral longMask))
           carry = (xy `logicalShiftR` intSize) + (um `logicalShiftR` intSize) + (temp `logicalShiftR` intSize)
           (_, _, _, carry', a') = foldl proc (xy, um, temp, carry, a) [1..n-1]
---           carry'' = carry' + (( a' !! n ) .&. longMask)
-          carry'' = carry + (( a' !! n ) .&. longMask)
-      in [carry'']
-        --( a' & ix ( n - 1 ) .~ carry'' ) & ix n .~ ( carry'' `logicalShiftR` intSize )
+          carry'' = carry' + ((fromIntegral $ a' !! n ) .&. longMask)
+      in ( a' & ix ( n - 1 ) .~ (fromIntegral carry'') ) & ix n .~ ( fromIntegral $ carry'' `logicalShiftR` intSize )
       where
         -- 2.1 u_i = (a[0] + x[i] * y[0]) * mQ mod b.
         u :: Int
-        u = (( (head a) + ((((x !! i) .&. longMask) * ((head y) .&. longMask)) .&. longMask)) * mQ ) .&. longMask
+        u = (( (fromIntegral $ head a)
+          + ((((fromIntegral $ x !! i) .&. longMask) * ((fromIntegral $ head y) .&. longMask)) .&. longMask))
+          * fromIntegral mQ ) .&. longMask
         -- 2.2 A = (A + x[i] * y + u_i * m) / b.
-        proc :: (Int, Int, Int, Int, [Int]) -> Int -> (Int, Int, Int, Int, [Int])
-        proc (xy', um', temp', carry', a') pos = (xy, um, temp, carry, a' & ix ( pos - 1 ) .~ temp)
+        proc :: (Int, Int, Int, Int, [Int32]) -> Int -> (Int, Int, Int, Int, [Int32])
+        proc (xy', um', temp', carry', a') pos = (xy, um, temp, carry, a' & ix ( pos - 1 ) .~ (fromIntegral temp))
           where
-            xy = ((x !! i) .&. longMask) * ((y !! pos) .&. longMask)
-            um = u * ((m !! pos) .&. longMask)
-            temp = ((a !! pos) .&. longMask) + (xy .&. longMask)  + (um .&. longMask)  + (carry' .&. longMask)
-            carry = (carry' `logicalShiftR` 32) + (xy `logicalShiftR` intSize) + (um `logicalShiftR` intSize) + (temp `logicalShiftR` intSize)
+            xy, um, temp, carry :: Int
+            xy = ((fromIntegral $ x !! i) .&. longMask) * ((fromIntegral $ y !! pos) .&. longMask)
+            um = u * ((fromIntegral $ m !! pos) .&. longMask)
+            temp = ((fromIntegral $ a' !! pos) .&. longMask)
+              + (xy .&. ( fromIntegral longMask))
+              + (um .&. ( fromIntegral longMask))
+              + (carry' .&. ( fromIntegral longMask))
+            carry = (carry' `logicalShiftR` 32)
+              + (xy `logicalShiftR` intSize)
+              + (um `logicalShiftR` intSize)
+              + (temp `logicalShiftR` intSize)
 
 logicalShiftR :: Int -> Int -> Int
 logicalShiftR x i = fromIntegral ((fromIntegral x :: Word64) `shiftR` i) :: Int

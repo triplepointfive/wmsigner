@@ -69,14 +69,12 @@ secureKeyByIDPHalf = undefined
 --     keyData = decode buf :: KeyFileFormat
 
 secureKeyByIDPW :: B.ByteString -> Int -> StateT Signer IO Bool
-secureKeyByIDPW = undefined
--- secureKeyByIDPW :: Signer -> ByteString -> Int -> Bool
--- secureKeyByIDPW singer buf dwBuf =
+secureKeyByIDPW buf dwBuf = undefined
 --   if wSignFlag keyData == 0
 --     then
 --       m_siErrorCode = -2
 --       False
---   else
+--   else do
 --     dwCRC = countCrcMD4 dwCRC (szLogin signer ++ szPassword signer) (length szIDPW)
 --     -- dwCRC SwitchIndian???
 --     char *ptrKey = ptrBuffer keyData

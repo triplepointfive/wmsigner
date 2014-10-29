@@ -1,7 +1,5 @@
 module Main where
 
-import Data.Word (Word32)
-
 import Test.Hspec
 
 import Montgomery
