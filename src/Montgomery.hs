@@ -5,7 +5,7 @@ import           Data.Bits (shiftL, (.&.), Bits, shiftR)
 import           Data.Int (Int32)
 import           Data.Word (Word8, Word32, Word64)
 
-import           Algebra (significance)
+import           Algebra (remainder, significance)
 
 intSize :: Int
 intSize = 32
@@ -22,7 +22,7 @@ longMask = 0xFFFFFFFF
 --           with e[t] = 1,
 --           and an integer x, 1 <= x < m.
 -- OUTPUT: x^e mod m.
-exponentation :: [Word32] -> [Word32] -> [Word32] -> [Word32]
+exponentation :: [Int32] -> [Int32] -> [Int32] -> [Int32]
 exponentation x e m = undefined
   where
     -- mQ = -m^1 mod b
@@ -30,8 +30,10 @@ exponentation x e m = undefined
     eLength = significance e
     mLenght = significance m
     -- 1. temp = Mont(x, R^2 mod m), A = R mod m.
---     temp = multiplication x r m mQ
---       where r = replicate ( length m ) 0 ++ [1]
+    temp = multiplication x r m mQ
+      where r = replicate ( length m ) 0 ++ [1] -- remainder?
+    a = replicate (length m) 0 ++ [1]
+    a' = remainder a m
 
 -- Algorithm Montgomery multiplication
 -- INPUT: integers
