@@ -1,9 +1,11 @@
 module Algebra where
 
-import Data.Bits (testBit, bitSize, Bits, (.&.))
-import Data.Int (Int32)
+import           Data.Bits (testBit, bitSize, Bits, (.&.), shiftL)
+import           Data.Int (Int32, Int64)
 
-longMask :: Int32
+import           Control.Lens ((&), ix, (.~))
+
+longMask :: Int64
 longMask = 0xFFFFFFFF
 
 compareLists :: [Int32] -> [Int32] -> Ordering
@@ -22,11 +24,11 @@ compareLists lhs rhs
       | lb < rb   = LT
       | otherwise = comp ls rs
       where
-        lb = l .&. longMask
-        rb = r .&. longMask
+        lb = (fromIntegral l) .&. longMask
+        rb = (fromIntegral r) .&. longMask
 
-significance :: [a] -> Int
-significance = length
+significance :: (Eq a, Bits a, Num a) => [a] -> Int
+significance xs = length $ dropWhile (== 0) $ reverse xs
 
 shift :: [a] -> Int -> [a]
 shift = undefined
@@ -34,8 +36,37 @@ shift = undefined
 shiftRight :: [a] -> [a]
 shiftRight = undefined
 
-sub :: [a] -> [a] -> [a]
-sub = undefined
+sub :: [Int32] -> [Int32] -> [Int32]
+sub lhs rhs
+    | lhsLength < rhsLength = error "Difference should not be negative."
+    | otherwise             = modulo $ rest subscribed
+  where
+    lhsLength = significance lhs
+    rhsLength = significance rhs
+
+    modulo :: ([Int32], Int32) -> [Int32]
+    modulo (_, 1) = error "Difference should not be negative."
+    modulo (l, _) = l
+
+    subscribed :: ([Int32], Int32)
+    subscribed = foldl substr (lhs, 0) [0..rhsLength - 1]
+      where
+        substr :: ([Int32], Int32) -> Int -> ([Int32], Int32)
+        substr (l, borrow) pos = ( l & ix pos .~ (fromIntegral temp), nBorrow )
+          where
+            temp = ((fromIntegral ( l !! pos ) ) .&. longMask )
+              - ((fromIntegral ( rhs !! pos ) ) .&. longMask )
+              - fromIntegral borrow
+            nBorrow = if temp .&. ( 1 `shiftL` 32 ) /= 0 then 1 else 0
+
+    rest :: ([Int32], Int32) -> ([Int32], Int32)
+    rest (ls, b) = foldl substr (ls, b) [rhsLength..lhsLength - 1]
+      where
+        substr :: ([Int32], Int32) -> Int -> ([Int32], Int32)
+        substr (l, borrow) pos = ( l & ix pos .~ (fromIntegral temp), nBorrow )
+          where
+            temp = ((fromIntegral ( l !! pos ) ) .&. longMask ) - fromIntegral borrow
+            nBorrow = if temp .&. ( 1 `shiftL` 32 ) /= 0 then 1 else 0
 
 remainder :: [Int32] -> [Int32] -> [Int32]
 remainder lhs rhs = divide lhs rhs
@@ -58,7 +89,7 @@ remainder lhs rhs = divide lhs rhs
         then subs (sub l t) t
         else l
 
-getBitsCount :: Bits a => [a] -> Int
+getBitsCount :: (Bits a, Num a) => [a] -> Int
 getBitsCount xs = ( vLenght -1 ) * 32 + ( getBitsNumber ( last xs ) )
   where vLenght = significance xs
 
