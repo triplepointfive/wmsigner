@@ -5,7 +5,7 @@ import           Data.Bits (shiftL, (.&.), Bits, shiftR)
 import           Data.Int (Int32)
 import           Data.Word (Word8, Word32, Word64)
 
-import           Algebra (remainder, significance)
+import           Algebra (remainder, significance, logicalShiftR)
 
 intSize :: Int
 intSize = 32
@@ -82,9 +82,6 @@ multiplication x y m mQ = foldl iter a0 [0..n-1]
               + (xy `logicalShiftR` intSize)
               + (um `logicalShiftR` intSize)
               + (temp `logicalShiftR` intSize)
-
-logicalShiftR :: Int -> Int -> Int
-logicalShiftR x i = fromIntegral ((fromIntegral x :: Word64) `shiftR` i) :: Int
 
 inverse :: ( Num a, Bits a ) => a -> a
 inverse value = -1 * ( iterate (\t -> t * ( 2 - value * t) ) temp !! 4 )

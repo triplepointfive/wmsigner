@@ -1,12 +1,16 @@
 module Algebra where
 
-import           Data.Bits (testBit, bitSize, Bits, (.&.), shiftL)
+import           Data.Bits (testBit, bitSize, Bits, (.&.), shiftL, shiftR, (.|.))
+import           Data.Word (Word64)
 import           Data.Int (Int32, Int64)
 
 import           Control.Lens ((&), ix, (.~))
 
 longMask :: Int64
 longMask = 0xFFFFFFFF
+
+logicalShiftR :: Integral a => a -> Int -> a
+logicalShiftR x i = fromIntegral ((fromIntegral x :: Word64) `shiftR` i)
 
 compareLists :: [Int32] -> [Int32] -> Ordering
 compareLists lhs rhs
@@ -30,11 +34,28 @@ compareLists lhs rhs
 significance :: (Eq a, Bits a, Num a) => [a] -> Int
 significance xs = length $ dropWhile (== 0) $ reverse xs
 
-shift :: [a] -> Int -> [a]
-shift = undefined
+shift :: [Int32] -> Int -> [Int32]
+shift lhs rhs = if outWordsCount <= 0 then [0] else undefined
+  where
+    shiftBits, shiftWords, inBitsCount, inWordsCount, outBitsCount, outWordsCount :: Int
+    shiftBits     = (abs rhs) `mod` 32
+    shiftWords    = (abs rhs) `div` 32
+    inBitsCount   = getBitsCount lhs
+    inWordsCount  = inBitsCount `div` 32 + (if inBitsCount `mod` 32 > 0 then 1 else 0)
+    outBitsCount  = inBitsCount + rhs
+    outWordsCount = outBitsCount `div` 32 + (if outBitsCount `mod` 32 > 0 then 1 else 0)
 
-shiftRight :: [a] -> [a]
-shiftRight = undefined
+shiftRight :: [Int32] -> [Int32]
+shiftRight value = fst $ foldl right (value, 0) [len-1, len-2..0]
+  where
+    len = significance value
+    right :: ([Int32], Int64) -> Int -> ([Int32], Int64)
+    right (v, carry) pos = ( v & ix pos .~ (fromIntegral val), nextCarry )
+      where
+        temp, nextCarry, val :: Int64
+        temp      = (fromIntegral $ v !! pos)             .&. longMask
+        nextCarry = (temp .&. 1) `shiftL` (32 - 1)        .&. longMask
+        val       = ((temp `logicalShiftR` 1) .|. carry ) .&. longMask
 
 sub :: [Int32] -> [Int32] -> [Int32]
 sub lhs rhs
@@ -75,7 +96,7 @@ remainder lhs rhs = divide lhs rhs
 
     divide :: [Int32] -> [Int32] -> [Int32]
     divide l r
-      | LT /= compareLists l r = l
+      | LT == compareLists l r = l
       | lhsBitsCount == 0      = l
       | otherwise              =
         let temp' = if compareLists l temp == LT then shiftRight temp else temp
