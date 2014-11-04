@@ -1,16 +1,21 @@
 module Algebra where
 
 import           Data.Bits (testBit, bitSize, Bits, (.&.), shiftL, shiftR, (.|.))
-import           Data.Word (Word64)
+import           Data.Word (Word64, Word32)
 import           Data.Int (Int32, Int64)
 
 import           Control.Lens ((&), ix, (.~))
+
+import           Debug.Trace
 
 longMask :: Int64
 longMask = 0xFFFFFFFF
 
 logicalShiftR :: Integral a => a -> Int -> a
 logicalShiftR x i = fromIntegral ((fromIntegral x :: Word64) `shiftR` i)
+
+logicalShiftRight :: Int32 -> Int -> Int32
+logicalShiftRight x i = fromIntegral ((fromIntegral x :: Word32) `shiftR` i)
 
 compareLists :: [Int32] -> [Int32] -> Ordering
 compareLists lhs rhs
@@ -35,7 +40,15 @@ significance :: (Eq a, Bits a, Num a) => [a] -> Int
 significance xs = length $ dropWhile (== 0) $ reverse xs
 
 shift :: [Int32] -> Int -> [Int32]
-shift lhs rhs = if outWordsCount <= 0 then [0] else undefined
+shift lhs rhs
+    | outWordsCount <= 0        = [0]
+    | shiftBits == 0 && rhs > 0 = error "1"
+    | rhs > 0                   = let (res, carry) = foldl shR (r0, 0) [0 .. inWordsCount - 1]
+      in if inWordsCount - 1 + shiftWords < outWordsCount
+        then res & ix ( inWordsCount + shiftWords ) .~ (res !! (inWordsCount + shiftWords) .|. carry)
+        else res
+    | shiftBits == 0            = error "3"
+    | otherwise                 = error "4"
   where
     shiftBits, shiftWords, inBitsCount, inWordsCount, outBitsCount, outWordsCount :: Int
     shiftBits     = (abs rhs) `mod` 32
@@ -44,6 +57,15 @@ shift lhs rhs = if outWordsCount <= 0 then [0] else undefined
     inWordsCount  = inBitsCount `div` 32 + (if inBitsCount `mod` 32 > 0 then 1 else 0)
     outBitsCount  = inBitsCount + rhs
     outWordsCount = outBitsCount `div` 32 + (if outBitsCount `mod` 32 > 0 then 1 else 0)
+
+    r0 = replicate (max inWordsCount outWordsCount) 0
+
+    shR :: ([Int32], Int32) -> Int -> ([Int32], Int32)
+    shR (res, carry) pos = ( res & ix ( pos + shiftWords ) .~ val, nextCarry )
+      where
+        temp      = lhs !! pos
+        val       = ( temp `shiftL` shiftBits ) .|. carry
+        nextCarry = temp `logicalShiftRight` ( 32 - shiftBits )
 
 shiftRight :: [Int32] -> [Int32]
 shiftRight value = fst $ foldl right (value, 0) [len-1, len-2..0]
