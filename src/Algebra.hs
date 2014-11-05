@@ -6,10 +6,11 @@ import           Data.Int (Int32, Int64)
 
 import           Control.Lens ((&), ix, (.~))
 
-import           Debug.Trace
-
 longMask :: Int64
 longMask = 0xFFFFFFFF
+
+intSize :: Int
+intSize = 32
 
 logicalShiftR :: Integral a => a -> Int -> a
 logicalShiftR x i = fromIntegral ((fromIntegral x :: Word64) `shiftR` i)
@@ -21,7 +22,7 @@ compareLists :: [Int32] -> [Int32] -> Ordering
 compareLists lhs rhs
     | lhsLenght > rhsLenght = GT
     | lhsLenght < rhsLenght = LT
-    | otherwise             = comp (reverse lhs) (reverse rhs)
+    | otherwise             = comp (reverse $ take lhsLenght lhs) (reverse $ take lhsLenght rhs)
   where
     lhsLenght = significance lhs
     rhsLenght = significance rhs
@@ -43,29 +44,39 @@ shift :: [Int32] -> Int -> [Int32]
 shift lhs rhs
     | outWordsCount <= 0        = [0]
     | shiftBits == 0 && rhs > 0 = error "1"
-    | rhs > 0                   = let (res, carry) = foldl shR (r0, 0) [0 .. inWordsCount - 1]
+    | rhs > 0                   =
+      let (res, carry) = foldl shRight (r0, 0) [0 .. inWordsCount - 1]
       in if inWordsCount - 1 + shiftWords < outWordsCount
-        then res & ix ( inWordsCount + shiftWords ) .~ (res !! (inWordsCount + shiftWords) .|. carry)
-        else res
+            then res & ix ( inWordsCount + shiftWords ) .~ (res !! (inWordsCount + shiftWords) .|. carry)
+            else res
     | shiftBits == 0            = error "3"
-    | otherwise                 = error "4"
+    | otherwise                 =
+      let carry = if outWordsCount + shiftWords < inWordsCount
+                    then (lhs !! (outWordsCount + shiftWords)) `shiftL` ( intSize - shiftBits)
+                    else 0
+      in fst $ foldl shLeft (r0, carry) [inWordsCount - 1, inWordsCount - 2 .. 0]
   where
     shiftBits, shiftWords, inBitsCount, inWordsCount, outBitsCount, outWordsCount :: Int
-    shiftBits     = (abs rhs) `mod` 32
-    shiftWords    = (abs rhs) `div` 32
+    shiftBits     = (abs rhs) `mod` intSize
+    shiftWords    = (abs rhs) `div` intSize
     inBitsCount   = getBitsCount lhs
-    inWordsCount  = inBitsCount `div` 32 + (if inBitsCount `mod` 32 > 0 then 1 else 0)
+    inWordsCount  = inBitsCount `div` intSize + (if inBitsCount `mod` intSize > 0 then 1 else 0)
     outBitsCount  = inBitsCount + rhs
-    outWordsCount = outBitsCount `div` 32 + (if outBitsCount `mod` 32 > 0 then 1 else 0)
+    outWordsCount = outBitsCount `div` intSize + (if outBitsCount `mod` intSize > 0 then 1 else 0)
 
     r0 = replicate (max inWordsCount outWordsCount) 0
 
-    shR :: ([Int32], Int32) -> Int -> ([Int32], Int32)
-    shR (res, carry) pos = ( res & ix ( pos + shiftWords ) .~ val, nextCarry )
+    shRight, shLeft :: ([Int32], Int32) -> Int -> ([Int32], Int32)
+    shRight (res, carry) pos = ( res & ix ( pos + shiftWords ) .~ val, nextCarry )
       where
         temp      = lhs !! pos
         val       = ( temp `shiftL` shiftBits ) .|. carry
-        nextCarry = temp `logicalShiftRight` ( 32 - shiftBits )
+        nextCarry = temp `logicalShiftRight` ( intSize - shiftBits )
+    shLeft (res, carry) pos = ( res & ix ( pos + shiftWords ) .~ val, nextCarry )
+      where
+        temp      = lhs !! (pos + shiftWords)
+        val       = (temp `logicalShiftRight` shiftBits) .|. carry
+        nextCarry = temp `shiftL` ( intSize - shiftBits )
 
 shiftRight :: [Int32] -> [Int32]
 shiftRight value = fst $ foldl right (value, 0) [len-1, len-2..0]
@@ -76,7 +87,7 @@ shiftRight value = fst $ foldl right (value, 0) [len-1, len-2..0]
       where
         temp, nextCarry, val :: Int64
         temp      = (fromIntegral $ v !! pos)             .&. longMask
-        nextCarry = (temp .&. 1) `shiftL` (32 - 1)        .&. longMask
+        nextCarry = (temp .&. 1) `shiftL` ( intSize - 1)  .&. longMask
         val       = ((temp `logicalShiftR` 1) .|. carry ) .&. longMask
 
 sub :: [Int32] -> [Int32] -> [Int32]
@@ -100,7 +111,7 @@ sub lhs rhs
             temp = ((fromIntegral ( l !! pos ) ) .&. longMask )
               - ((fromIntegral ( rhs !! pos ) ) .&. longMask )
               - fromIntegral borrow
-            nBorrow = if temp .&. ( 1 `shiftL` 32 ) /= 0 then 1 else 0
+            nBorrow = if temp .&. ( 1 `shiftL` intSize ) /= 0 then 1 else 0
 
     rest :: ([Int32], Int32) -> ([Int32], Int32)
     rest (ls, b) = foldl substr (ls, b) [rhsLength..lhsLength - 1]
@@ -109,7 +120,7 @@ sub lhs rhs
         substr (l, borrow) pos = ( l & ix pos .~ (fromIntegral temp), nBorrow )
           where
             temp = ((fromIntegral ( l !! pos ) ) .&. longMask ) - fromIntegral borrow
-            nBorrow = if temp .&. ( 1 `shiftL` 32 ) /= 0 then 1 else 0
+            nBorrow = if temp .&. ( 1 `shiftL` intSize ) /= 0 then 1 else 0
 
 remainder :: [Int32] -> [Int32] -> [Int32]
 remainder lhs rhs = divide lhs rhs
@@ -133,11 +144,11 @@ remainder lhs rhs = divide lhs rhs
         else l
 
 getBitsCount :: (Bits a, Num a) => [a] -> Int
-getBitsCount xs = ( vLenght -1 ) * 32 + ( getBitsNumber ( last xs ) )
+getBitsCount xs = ( vLenght - 1 ) * intSize + ( getBitsNumber ( xs !! (vLenght - 1) ) )
   where vLenght = significance xs
 
 getBitsNumber :: Bits a => a -> Int
-getBitsNumber x = 32 - numberOfLeadingZeros x
+getBitsNumber x = intSize - numberOfLeadingZeros x
 
 numberOfLeadingZeros :: Bits a => a -> Int
 numberOfLeadingZeros x = length $ takeWhile (not . testBit x) [size - 1, size - 2 .. 0]
