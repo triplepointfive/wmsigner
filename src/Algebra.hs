@@ -153,3 +153,10 @@ getBitsNumber x = intSize - numberOfLeadingZeros x
 numberOfLeadingZeros :: Bits a => a -> Int
 numberOfLeadingZeros x = length $ takeWhile (not . testBit x) [size - 1, size - 2 .. 0]
   where size = bitSize x
+
+resize :: [Int32] -> Int -> [Int32]
+resize v l
+  | l < 0       = error "Invalid value for length"
+  | vLength < l = v ++ (replicate (l - vLength) 0)
+  | otherwise   = take l v
+  where vLength = length v
