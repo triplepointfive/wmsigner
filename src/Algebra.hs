@@ -43,7 +43,7 @@ significance xs = length $ dropWhile (== 0) $ reverse xs
 shift :: [Int32] -> Int -> [Int32]
 shift lhs rhs
     | outWordsCount <= 0        = [0]
-    | shiftBits == 0 && rhs > 0 = error "1"
+    | shiftBits == 0 && rhs > 0 = (take shiftWords r0) ++ (take (outWordsCount - shiftWords) lhs)
     | rhs > 0                   =
       let (res, carry) = foldl shRight (r0, 0) [0 .. inWordsCount - 1]
       in if inWordsCount - 1 + shiftWords < outWordsCount
@@ -160,3 +160,6 @@ resize v l
   | vLength < l = v ++ (replicate (l - vLength) 0)
   | otherwise   = take l v
   where vLength = length v
+
+normalize :: [Int32] -> [Int32]
+normalize x = resize x ( significance x )

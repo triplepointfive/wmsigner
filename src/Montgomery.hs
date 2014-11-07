@@ -2,16 +2,18 @@ module Montgomery where
 
 import           Control.Lens ((&), ix, (.~))
 import           Data.Bits (shiftL, (.&.), Bits, shiftR)
-import           Data.Int (Int32)
+import           Data.Int (Int32, Int64)
 import           Data.Word (Word8, Word32, Word64)
 
-import           Algebra (remainder, significance, logicalShiftR, resize)
+import           Algebra (remainder, significance, logicalShiftR, resize, normalize)
 
 intSize :: Int
 intSize = 32
-bitMask, longMask :: Int
-bitMask = 0x80000000
+longMask :: Int
 longMask = 0xFFFFFFFF
+
+bitMask :: Int64
+bitMask = 0x80000000
 
 -- Algorithm Montgomery exponentiation
 -- INPUT:
@@ -23,19 +25,44 @@ longMask = 0xFFFFFFFF
 --           and an integer x, 1 <= x < m.
 -- OUTPUT: x^e mod m.
 exponentation :: [Int32] -> [Int32] -> [Int32] -> [Int32]
-exponentation x e m = r
+exponentation x e m = normalize a3
   where
     -- mQ = -m^1 mod b
     mQ = inverse $ head m
     eLength = significance e
     mLength = significance m
     -- 1. temp = Mont(x, R^2 mod m), A = R mod m.
-    temp = multiplication x' r m mQ
---       where
-    r = replicate ( 2 * length m ) 0 ++ [1] -- remainder?
-    x' = if mLength > (length x) then resize x mLength else x
---     a = replicate (length m) 0 ++ [1]
---     a' = remainder a m
+    temp = multiplication x' r2 m mQ
+      where
+        r = replicate ( 2 * length m ) 0 ++ [1]
+        r2 = remainder r m
+        x' = if mLength > (length x) then resize x mLength else x
+    a0 = remainder a' m
+      where
+        a' = replicate (length m) 0 ++ [1]
+
+    pos0 = eLength - 1
+
+    mask0 :: Int64
+    mask0 = head $ dropWhile (\m -> (fromIntegral $ e !! pos0) .&. m == 0) $ iterate (\m -> m `logicalShiftR` 1) bitMask
+
+    -- 2. For i from t down to 0 do the following:
+    a2  = mont a0 pos0 mask0
+    mont :: [Int32] -> Int -> Int64 -> [Int32]
+    mont a pos mask
+      | pos < 0    = a
+      | mask' == 0 = mont a'' (pos - 1) bitMask
+      | otherwise  = mont a'' pos mask'
+      where
+        -- 2.1 A = Mont(A, A).
+        a'  = multiplication a a m mQ
+        -- 2.2 If e[i] = 1 then A = Mont(A, temp).
+        a'' = if (0 /= (fromIntegral $ e !! pos) .&. mask) then multiplication a' temp m mQ else a'
+        mask'  = mask `shiftR` 1
+
+    -- 3. A Mont(A, 1).
+    one = 1 : replicate (length m - 1) 0
+    a3  = multiplication a2 one m mQ
 
 -- Algorithm Montgomery multiplication
 -- INPUT: integers
