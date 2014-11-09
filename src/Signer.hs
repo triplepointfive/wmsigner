@@ -30,11 +30,9 @@ data Signer where
   Signer :: { expon     :: ![Int32]
             , modulus   :: ![Int32]
             , keyLength :: !Int
-            } -> Signer
+            } -> Signer deriving (Show)
 
-instance Show Signer
-
-newSigner :: [Int8] -> [Int8] -> Signer
+newSigner :: [Word8] -> [Word8] -> Signer
 newSigner expon' modul = Signer { expon     = cast expon'
                                 , modulus   = modulus'
                                 , keyLength = (significance modul) * byteSize
@@ -60,8 +58,7 @@ newSigner expon' modul = Signer { expon     = cast expon'
 --         ]
 
 signBytes :: Signer -> B.ByteString -> Bool -> [Int32]
-signBytes signer message randomEnabled = error $ show [(cast blob),(expon signer),(modulus signer)]
-    -- exponentation (cast blob) (expon signer) (modulus signer)
+signBytes signer message randomEnabled = exponentation (cast blob) (expon signer) (modulus signer)
   where
     blob = header
            ++ B.unpack ( hash message )
