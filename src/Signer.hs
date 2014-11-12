@@ -47,7 +47,7 @@ sign signer message randomEnabled =
   where signature = signBytes signer message randomEnabled
 
 buildSignature :: Signer -> [Int32] -> String
-buildSignature signer signature = concat --error $ show
+buildSignature signer signature = concat
     [ if length signature > pos `div` ( intSize `div` shortSize )
       then
         let
