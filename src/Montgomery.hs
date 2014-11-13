@@ -36,7 +36,7 @@ exponentation x e m = normalize a3
       where
         r = replicate ( 2 * length m ) 0 ++ [1]
         r2 = remainder r m
-        x' = if mLength > (length x) then resize x mLength else x
+        x' = if mLength > length x then resize x mLength else x
     a0 = remainder a' m
       where
         a' = replicate (length m) 0 ++ [1]
@@ -44,7 +44,7 @@ exponentation x e m = normalize a3
     pos0 = eLength - 1
 
     mask0 :: Int64
-    mask0 = head $ dropWhile (\m -> (fromIntegral $ e !! pos0) .&. m == 0) $ iterate (\m -> m `logicalShiftR` 1) bitMask
+    mask0 = head $ dropWhile (\m -> fromIntegral (e !! pos0) .&. m == 0) $ iterate (`logicalShiftR` 1) bitMask
 
     -- 2. For i from t down to 0 do the following:
     a2  = mont a0 pos0 mask0
@@ -57,7 +57,7 @@ exponentation x e m = normalize a3
         -- 2.1 A = Mont(A, A).
         a'  = multiplication a a m mQ
         -- 2.2 If e[i] = 1 then A = Mont(A, temp).
-        a'' = if (0 /= (fromIntegral $ e !! pos) .&. mask) then multiplication a' temp m mQ else a'
+        a'' = if 0 /= fromIntegral (e !! pos) .&. mask then multiplication a' temp m mQ else a'
         mask'  = mask `shiftR` 1
 
     -- 3. A Mont(A, 1).
@@ -83,30 +83,30 @@ multiplication x y m mQ = foldl iter a0 [0..n-1]
     iter :: [Int32] -> Int -> [Int32]
     iter a i =
       let xy, um, temp, carry :: Int
-          xy    = ((fromIntegral $ x !! i) .&. longMask) * ((fromIntegral $ head y) .&. longMask)
-          um    = u * ((fromIntegral $ head m) .&. longMask)
-          temp  = ((fromIntegral $ head a) .&. longMask) + (xy .&. (fromIntegral longMask)) + (um .&. (fromIntegral longMask))
+          xy    = (fromIntegral ( x !! i) .&. longMask) * (fromIntegral ( head y) .&. longMask)
+          um    = u * (fromIntegral (head m) .&. longMask)
+          temp  = (fromIntegral (head a) .&. longMask) + (xy .&. fromIntegral longMask) + (um .&. fromIntegral longMask)
           carry = (xy `logicalShiftR` intSize) + (um `logicalShiftR` intSize) + (temp `logicalShiftR` intSize)
           (_, _, _, carry', a') = foldl proc (xy, um, temp, carry, a) [1..n-1]
-          carry'' = carry' + ((fromIntegral $ a' !! n ) .&. longMask)
-      in ( a' & ix ( n - 1 ) .~ (fromIntegral carry'') ) & ix n .~ ( fromIntegral $ carry'' `logicalShiftR` intSize )
+          carry'' = carry' + (fromIntegral ( a' !! n ) .&. longMask)
+      in ( a' & ix ( n - 1 ) .~ fromIntegral carry'' ) & ix n .~ fromIntegral ( carry'' `logicalShiftR` intSize )
       where
         -- 2.1 u_i = (a[0] + x[i] * y[0]) * mQ mod b.
         u :: Int
-        u = (( (fromIntegral $ head a)
-          + ((((fromIntegral $ x !! i) .&. longMask) * ((fromIntegral $ head y) .&. longMask)) .&. longMask))
+        u = (( fromIntegral (head a)
+          + (((fromIntegral (x !! i) .&. longMask) * (fromIntegral (head y) .&. longMask)) .&. longMask))
           * fromIntegral mQ ) .&. longMask
         -- 2.2 A = (A + x[i] * y + u_i * m) / b.
         proc :: (Int, Int, Int, Int, [Int32]) -> Int -> (Int, Int, Int, Int, [Int32])
-        proc (xy', um', temp', carry', a') pos = (xy, um, temp, carry, a' & ix ( pos - 1 ) .~ (fromIntegral temp))
+        proc (xy', um', temp', carry', a') pos = (xy, um, temp, carry, a' & ix ( pos - 1 ) .~ fromIntegral temp)
           where
             xy, um, temp, carry :: Int
-            xy = ((fromIntegral $ x !! i) .&. longMask) * ((fromIntegral $ y !! pos) .&. longMask)
-            um = u * ((fromIntegral $ m !! pos) .&. longMask)
-            temp = ((fromIntegral $ a' !! pos) .&. longMask)
-              + (xy .&. ( fromIntegral longMask))
-              + (um .&. ( fromIntegral longMask))
-              + (carry' .&. ( fromIntegral longMask))
+            xy = (fromIntegral (x !! i) .&. longMask) * (fromIntegral (y !! pos) .&. longMask)
+            um = u * (fromIntegral (m !! pos) .&. longMask)
+            temp = (fromIntegral (a' !! pos) .&. longMask)
+              + (xy .&. fromIntegral longMask)
+              + (um .&. fromIntegral longMask)
+              + (carry' .&. fromIntegral longMask)
             carry = (carry' `logicalShiftR` 32)
               + (xy `logicalShiftR` intSize)
               + (um `logicalShiftR` intSize)
