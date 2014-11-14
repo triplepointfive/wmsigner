@@ -1,10 +1,11 @@
 module Algebra where
 
-import           Data.Bits (testBit, bitSize, Bits, (.&.), shiftL, shiftR, (.|.))
-import           Data.Word (Word64, Word32)
-import           Data.Int (Int32, Int64)
+import           Data.Bits    (Bits, bitSize, shiftL, shiftR, testBit, (.&.),
+                               (.|.))
+import           Data.Int     (Int32, Int64)
+import           Data.Word    (Word32, Word64)
 
-import           Control.Lens ((&), ix, (.~))
+import           Control.Lens (ix, (&), (.~))
 
 longMask :: Int64
 longMask = 0xFFFFFFFF

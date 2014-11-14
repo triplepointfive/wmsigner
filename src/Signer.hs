@@ -2,20 +2,22 @@
 
 module Signer where
 
-import           Data.Bits (shiftR, shiftL, (.|.))
-import           Data.Char (ord)
-import           Data.Int (Int8, Int16, Int32)
-import           Data.List (foldl')
-import           Data.Word (Word8, Word32)
-import           Text.Printf (printf)
+import           Control.Monad            (replicateM)
+import           Data.Bits                (shiftL, (.|.))
+import           Data.Char                (ord)
+import           Data.Int                 (Int16, Int32)
+import           Data.List                (foldl')
+import           Data.Word                (Word8)
+import           System.Random            (randomIO)
+import           Text.Printf              (printf)
 
-import           Crypto.Hash.MD4 (hash)
-import qualified Data.ByteString as B (ByteString, elem, unpack, pack)
+import           Crypto.Hash.MD4          (hash)
+import qualified Data.ByteString          as B (ByteString, elem, pack, unpack)
 import qualified Data.ByteString.Internal as B (c2w)
-import           Data.List.Split (chunksOf)
+import           Data.List.Split          (chunksOf)
 
-import           Algebra (significance, logicalShiftRight)
-import           Montgomery (exponentation)
+import           Algebra                  (logicalShiftRight, significance)
+import           Montgomery               (exponentation)
 
 intSize, shortSize, byteSize, hashSize :: Int
 intSize   = 32
@@ -41,26 +43,34 @@ newSigner expon' modul = Signer { expon     = cast expon'
   where modulus' = cast modul
 
 signUnsafe :: Signer -> String -> String
-signUnsafe signer =
-  buildSignature signer . signBytes signer ( zeroBuffer signer ) . validate . B.pack . map ( fromIntegral . ord )
+signUnsafe signer = signWithBuffer signer (zeroBuffer signer)
 
+sign :: Signer -> String -> IO String
+sign signer message = do
+    rndBuf <- randomBuffer signer
+    return $ signWithBuffer signer rndBuf message
+
+signWithBuffer :: Signer -> [Word8] -> String -> String
+signWithBuffer signer buffer =
+  buildSignature signer . signBytes signer buffer . validate . B.pack . map ( fromIntegral . ord )
+
+validate :: B.ByteString -> B.ByteString
 validate message = if B.c2w '\r' `B.elem` message
-    then error "Message cannot contain of the following character: '\r'."
-    else message
+  then error "Message cannot contain of the following character: '\r'."
+  else message
 
-zeroBuffer signer = replicate rndBufferLength 0
-  where
-    rndBufferLength = keyLength signer `div` byteSize
-                      - length header
-                      - hashSize `div` byteSize
-                      - length trail
+zeroBuffer :: Signer -> [Word8]
+zeroBuffer signer = replicate (bufferLength signer) 0
 
-sign :: Signer -> B.ByteString -> String
-sign signer message =
-  if B.c2w '\r' `B.elem` message
-    then error "Message cannot contain of the following character: '\r'."
-    else buildSignature signer signature
-  where signature = signBytes signer (zeroBuffer signer) message
+randomBuffer :: Signer -> IO [Word8]
+randomBuffer signer = replicateM (bufferLength signer) randomIO
+
+bufferLength :: Signer -> Int
+bufferLength signer = keyLength signer `div` byteSize
+                    - length header
+                    - hashSize `div` byteSize
+                    - length trail
+
 
 buildSignature :: Signer -> [Int32] -> String
 buildSignature signer signature = concat

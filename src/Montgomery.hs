@@ -1,11 +1,11 @@
 module Montgomery where
 
-import           Control.Lens ((&), ix, (.~))
-import           Data.Bits (shiftL, (.&.), Bits, shiftR)
-import           Data.Int (Int32, Int64)
-import           Data.Word (Word8, Word32, Word64)
+import           Control.Lens (ix, (&), (.~))
+import           Data.Bits    (Bits, shiftL, shiftR, (.&.))
+import           Data.Int     (Int32, Int64)
 
-import           Algebra (remainder, significance, logicalShiftR, resize, normalize)
+import           Algebra      (logicalShiftR, normalize, remainder, resize,
+                               significance)
 
 intSize :: Int
 intSize = 32

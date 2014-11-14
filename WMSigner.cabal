@@ -18,15 +18,16 @@ cabal-version:       >=1.10
 executable WMSigner
     main-is:             Main.hs
     other-modules:       Signer, Montgomery, Algebra
-    build-depends:       base >=4.6 && <4.8, bytestring >= 0.10, directory >= 1.0.0.0, cryptohash,
+    build-depends:       base >=4.6 && <4.8, bytestring >= 0.10, directory >= 1.0.0.0, cryptohash, random,
                          base64-bytestring >= 1, binary >= 0.5, random >= 1.0.1, mtl >= 2.1, split >= 0.2, lens >= 4.4
     hs-source-dirs:      src
     default-language:    Haskell2010
+    ghc-options:         -Wall -fno-warn-unused-do-bind -fno-warn-missing-signatures -O
 
 Test-Suite test-WMSigner
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
-    build-depends:    base, hspec, lens >= 4.4, bytestring >= 0.10, split >= 0.2, cryptohash
+    build-depends:    base, hspec, lens >= 4.4, bytestring >= 0.10, split >= 0.2, cryptohash, random
     buildable:        True
     cpp-options:      -DTEST_MODE=true
     hs-source-dirs:   src test
