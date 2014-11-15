@@ -33,21 +33,21 @@ main = hspec $ do
       `shouldBe`
       "6c4e54a62bd9e15a47adccd2e002d8c0a12b031c9ebae5ee5f2cd84db04086374b7649f87ac7346e6364a0922433b6740d0c010f72acba4fa7a84816bb7a0d4d052f"
     it "blank" $ do
-      ( sign
+      ( signUnsafe
         signer
-        (B.pack $ map (fromIntegral . ord) "                                                                  "))
+        "                                                                  ")
       `shouldBe`
       "d5295349168cdb6fdbdb9c1984836cc1db939dda1dd6e18112db007154db8065b25583c71bd952f88f24f2515fbc4bb3037e5cedd5ef33cd336960b6a655537304bf"
     it "symbols" $ do
-      ( sign
+      ( signUnsafe
         signer
-        (B.pack $ map (fromIntegral . ord) "!@#$%^&*()-=_{}[]\"'1234567890.,%:?<>/\\"))
+        "!@#$%^&*()-=_{}[]\"'1234567890.,%:?<>/\\")
       `shouldBe`
       "61b8260b9d5d7cce8e1c0262f0722b8114a7b3e233d76f4b93d08933a89d23d73acfb2d960966b0c175a8604e7c71c391b7f2a64743b3c3b11c5d07ed224445300b3"
     it "specSymbols" $ do
-      ( sign
+      ( signUnsafe
         signer
-        (B.pack $ map (fromIntegral . ord) "\n\n\n\n\t\t\t\t\n\n\n\n"))
+        "\n\n\n\n\t\t\t\t\n\n\n\n")
       `shouldBe`
       "c37c96e02f8678a13a43a3bade0ba77275da0d9869d18856daaf4b413106a9bfea74054462d851a0c5a2596dbf9c371284c61b3741b35343c91d2978db328c2f00c9"
   describe "Montgomery" $ do
