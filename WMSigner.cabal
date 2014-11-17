@@ -27,7 +27,7 @@ executable WMSigner
 Test-Suite test-WMSigner
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
-    build-depends:    base, hspec, lens >= 4.4, bytestring >= 0.10, split >= 0.2, cryptohash, random
+    build-depends:    base, hspec, lens >= 4.4, bytestring >= 0.10, split >= 0.2, cryptohash, random, vector >= 0.10
     buildable:        True
     cpp-options:      -DTEST_MODE=true
     hs-source-dirs:   src test

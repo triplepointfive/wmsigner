@@ -19,6 +19,9 @@ import           Data.List.Split          (chunksOf)
 import           Algebra                  (logicalShiftRight, significance)
 import           Montgomery               (exponentation)
 
+import           Data.Vector  (Vector, fromList, (!))
+import qualified Data.Vector  as V (replicate, length, concat)
+
 intSize, shortSize, byteSize, hashSize :: Int
 intSize   = 32
 shortSize = 16
@@ -30,17 +33,17 @@ header = [0x38, 0]
 trail = [1, 0]
 
 data Signer where
-  Signer :: { expon     :: ![Int32]
-            , modulus   :: ![Int32]
+  Signer :: { expon     :: !(Vector Int32)
+            , modulus   :: !(Vector Int32)
             , keyLength :: !Int
             } -> Signer deriving (Show)
 
 newSigner :: [Word8] -> [Word8] -> Signer
-newSigner expon' modul = Signer { expon     = cast expon'
+newSigner expon' modul = Signer { expon     = fromList (cast expon')
                                 , modulus   = modulus'
-                                , keyLength = significance modul * byteSize
+                                , keyLength = significance (fromList modul) * byteSize
                                 }
-  where modulus' = cast modul
+  where modulus' = fromList (cast modul)
 
 signUnsafe :: Signer -> String -> String
 signUnsafe signer = signWithBuffer signer (zeroBuffer signer)
@@ -71,22 +74,21 @@ bufferLength signer = keyLength signer `div` byteSize
                     - hashSize `div` byteSize
                     - length trail
 
-
-buildSignature :: Signer -> [Int32] -> String
+buildSignature :: Signer -> Vector Int32 -> String
 buildSignature signer signature = concat
-    [ if length signature > pos `div` ( intSize `div` shortSize )
+    [ if V.length signature > pos `div` ( intSize `div` shortSize )
       then
         let
           shift = if 0 == pos `mod` ( intSize `div` shortSize ) then 0 else shortSize :: Int
-          letter = signature !! fromIntegral (pos `div` ( intSize `div` shortSize ))
+          letter = signature ! fromIntegral (pos `div` ( intSize `div` shortSize ))
         in printf "%04x" (fromIntegral (letter `logicalShiftRight` shift) :: Int16)
       else
         printf "%04x" ( 0 :: Int )
       | pos <- [0, 1 .. keyLength signer `div` shortSize - 1]
     ]
 
-signBytes :: Signer -> [Word8] -> B.ByteString -> [Int32]
-signBytes signer rndBuffer message = exponentation (cast blob) (expon signer) (modulus signer)
+signBytes :: Signer -> [Word8] -> B.ByteString -> Vector Int32
+signBytes signer rndBuffer message = exponentation (fromList $ cast blob) (expon signer) (modulus signer)
   where blob = header ++ B.unpack ( hash message ) ++ rndBuffer ++ trail
 
 cast :: Integral a => [a] -> [Int32]
