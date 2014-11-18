@@ -1,4 +1,4 @@
-module Algebra where
+module Crypto.Internal.Algebra where
 
 import           Data.Bits    (Bits, bitSize, shiftL, shiftR, testBit, (.&.),
                                (.|.))
@@ -7,7 +7,7 @@ import           Data.Word    (Word32, Word64)
 
 import           Control.Lens (ix, (&), (.~))
 import           Data.Vector  (Vector, singleton, (!))
-import qualified Data.Vector  as V (dropWhile, head, init, last, length, null,
+import qualified Data.Vector  as V (init, last, length, null,
                                     replicate, take, (++))
 
 longMask :: Int64

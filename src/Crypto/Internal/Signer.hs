@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs #-}
 
-module Signer where
+module Crypto.Internal.Signer where
 
 import           Control.Monad            (replicateM)
 import           Data.Bits                (shiftL, (.|.))
@@ -16,8 +16,8 @@ import qualified Data.ByteString          as B (ByteString, elem, pack, unpack)
 import qualified Data.ByteString.Internal as B (c2w)
 import           Data.List.Split          (chunksOf)
 
-import           Algebra                  (logicalShiftRight, significance)
-import           Montgomery               (exponentation)
+import           Crypto.Internal.Algebra                  (logicalShiftRight, significance)
+import           Crypto.Internal.Montgomery               (exponentation)
 
 import           Data.Vector  (Vector, fromList, (!))
 import qualified Data.Vector  as V (replicate, length, concat)

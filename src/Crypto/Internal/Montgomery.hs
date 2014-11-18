@@ -1,10 +1,10 @@
-module Montgomery where
+module Crypto.Internal.Montgomery where
 
 import           Control.Lens (ix, (&), (.~))
 import           Data.Bits    (Bits, shiftL, shiftR, (.&.))
 import           Data.Int     (Int32, Int64)
 
-import           Algebra      (logicalShiftR, normalize, remainder, resize,
+import           Crypto.Internal.Algebra      (logicalShiftR, normalize, remainder, resize,
                                significance)
 
 import           Data.Vector  (Vector, cons, snoc, (!))
