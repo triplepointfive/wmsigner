@@ -1,18 +1,17 @@
 module Crypto.Internal.Montgomery where
 
-import           Control.Lens (ix, (&), (.~))
-import           Data.Bits    (Bits, shiftL, shiftR, (.&.))
-import           Data.Int     (Int32, Int64)
+import           Control.Lens            (ix, (&), (.~))
+import           Data.Bits               (Bits, shiftL, shiftR, (.&.))
+import           Data.Int                (Int32, Int64)
 
-import           Crypto.Internal.Algebra      (logicalShiftR, normalize, remainder, resize,
-                               significance)
+import           Crypto.Internal.Algebra (logicalShiftR, normalize, remainder,
+                                          resize, significance)
 
-import           Data.Vector  (Vector, cons, snoc, (!))
-import qualified Data.Vector  as V (head, length, replicate)
+import           Data.Vector             (Vector, cons, snoc, (!))
+import qualified Data.Vector             as V (head, length, replicate)
 
-intSize :: Int
+intSize, longMask :: Int
 intSize = 32
-longMask :: Int
 longMask = 0xFFFFFFFF
 
 bitMask :: Int64
@@ -47,7 +46,7 @@ exponentation x e m = normalize a3
     pos0 = eLength - 1
 
     mask0 :: Int64
-    mask0 = head $ dropWhile (\m -> fromIntegral (e ! pos0) .&. m == 0) $ iterate (`logicalShiftR` 1) bitMask
+    mask0 = head $ dropWhile (\mask -> fromIntegral (e ! pos0) .&. mask == 0) $ iterate (`logicalShiftR` 1) bitMask
 
     -- 2. For i from t down to 0 do the following:
     a2  = mont a0 pos0 mask0
@@ -84,15 +83,7 @@ multiplication x y m mQ = foldl iter a0 [0..n-1]
     a0 = V.replicate (n + 1) 0
     -- 2. For i from 0 to (n - 1) do the following:
     iter :: Vector Int32 -> Int -> Vector Int32
-    iter a i =
-      let xy, um, temp, carry :: Int
-          xy    = (fromIntegral ( x ! i) .&. longMask) * (fromIntegral ( V.head y) .&. longMask)
-          um    = u * (fromIntegral (V.head m) .&. longMask)
-          temp  = (fromIntegral (V.head a) .&. longMask) + (xy .&. fromIntegral longMask) + (um .&. fromIntegral longMask)
-          carry = (xy `logicalShiftR` intSize) + (um `logicalShiftR` intSize) + (temp `logicalShiftR` intSize)
-          (_, _, _, carry', a') = foldl proc (xy, um, temp, carry, a) [1..n-1]
-          carry'' = carry' + (fromIntegral ( a' ! n ) .&. longMask)
-      in ( a' & ix ( n - 1 ) .~ fromIntegral carry'' ) & ix n .~ fromIntegral ( carry'' `logicalShiftR` intSize )
+    iter a i = ( fin_a & ix ( n - 1 ) .~ fromIntegral fin_carry ) & ix n .~ fromIntegral ( fin_carry `logicalShiftR` intSize )
       where
         -- 2.1 u_i = (a[0] + x[i] * y[0]) * mQ mod b.
         u :: Int
@@ -100,8 +91,8 @@ multiplication x y m mQ = foldl iter a0 [0..n-1]
           + (((fromIntegral (x ! i) .&. longMask) * (fromIntegral (V.head y) .&. longMask)) .&. longMask))
           * fromIntegral mQ ) .&. longMask
         -- 2.2 A = (A + x[i] * y + u_i * m) / b.
-        proc :: (Int, Int, Int, Int, Vector Int32) -> Int -> (Int, Int, Int, Int, Vector Int32)
-        proc (xy', um', temp', carry', a') pos = (xy, um, temp, carry, a' & ix ( pos - 1 ) .~ fromIntegral temp)
+        proc :: (Int, Vector Int32) -> Int -> (Int, Vector Int32)
+        proc (last_carry, a') pos = (carry, a' & ix ( pos - 1 ) .~ fromIntegral temp)
           where
             xy, um, temp, carry :: Int
             xy = (fromIntegral (x ! i) .&. longMask) * (fromIntegral (y ! pos) .&. longMask)
@@ -109,11 +100,13 @@ multiplication x y m mQ = foldl iter a0 [0..n-1]
             temp = (fromIntegral (a' ! pos) .&. longMask)
               + (xy .&. fromIntegral longMask)
               + (um .&. fromIntegral longMask)
-              + (carry' .&. fromIntegral longMask)
-            carry = (carry' `logicalShiftR` 32)
+              + (last_carry .&. fromIntegral longMask)
+            carry = (last_carry `logicalShiftR` 32)
               + (xy `logicalShiftR` intSize)
               + (um `logicalShiftR` intSize)
               + (temp `logicalShiftR` intSize)
+        (carry', fin_a) = foldl proc (0, a) [0..n-1]
+        fin_carry = carry' + (fromIntegral ( fin_a ! n ) .&. longMask)
 
 inverse :: ( Num a, Bits a ) => a -> a
 inverse value = -1 * ( iterate (\t -> t * ( 2 - value * t) ) temp !! 4 )

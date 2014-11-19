@@ -24,7 +24,7 @@ cabal-version:          >=1.8
 
 library
     exposed-modules:    Crypto.Webmoney
-                        Crypto.Internal.Signer
+    other-modules:      Crypto.Internal.Signer
                         Crypto.Internal.Montgomery
                         Crypto.Internal.Algebra
     build-depends:      base >=4.6 && <4.8

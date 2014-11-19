@@ -1,3 +1,8 @@
-module Crypto.Webmoney where
+module Crypto.Webmoney
+    (
+      module Crypto.Internal.Signer
+    )
+    where
 
-import Crypto.Internal.Signer
+import qualified Crypto.Internal.Signer as S (Signer, newSigner, sign,
+                                              signUnsafe)

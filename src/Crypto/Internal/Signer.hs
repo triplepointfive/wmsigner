@@ -2,25 +2,25 @@
 
 module Crypto.Internal.Signer where
 
-import           Control.Monad            (replicateM)
-import           Data.Bits                (shiftL, (.|.))
-import           Data.Char                (ord)
-import           Data.Int                 (Int16, Int32)
-import           Data.List                (foldl')
-import           Data.Word                (Word8)
-import           System.Random            (randomIO)
-import           Text.Printf              (printf)
+import           Control.Monad              (replicateM)
+import           Data.Bits                  (shiftL, (.|.))
+import           Data.Char                  (ord)
+import           Data.Int                   (Int16, Int32)
+import           Data.List                  (foldl')
+import           Data.Word                  (Word8)
+import           System.Random              (randomIO)
+import           Text.Printf                (printf)
 
-import           Crypto.Hash.MD4          (hash)
-import qualified Data.ByteString          as B (ByteString, elem, pack, unpack)
-import qualified Data.ByteString.Internal as B (c2w)
-import           Data.List.Split          (chunksOf)
+import           Crypto.Hash.MD4            (hash)
+import qualified Data.ByteString            as B (ByteString, elem, pack,
+                                                  unpack)
+import qualified Data.ByteString.Internal   as B (c2w)
+import           Data.List.Split            (chunksOf)
 
-import           Crypto.Internal.Algebra                  (logicalShiftRight, significance)
-import           Crypto.Internal.Montgomery               (exponentation)
+import           Crypto.Internal.Algebra    (logicalShiftRight, significance)
+import           Crypto.Internal.Montgomery (exponentation)
 
-import           Data.Vector  (Vector, fromList, (!))
-import qualified Data.Vector  as V (replicate, length, concat)
+import           Data.Vector                (Vector, fromList, (!))
 
 intSize, shortSize, byteSize, hashSize :: Int
 intSize   = 32
@@ -36,7 +36,7 @@ data Signer where
   Signer :: { expon     :: !(Vector Int32)
             , modulus   :: !(Vector Int32)
             , keyLength :: !Int
-            } -> Signer deriving (Show)
+            } -> Signer
 
 newSigner :: [Word8] -> [Word8] -> Signer
 newSigner expon' modul = Signer { expon     = fromList (cast expon')
@@ -45,9 +45,11 @@ newSigner expon' modul = Signer { expon     = fromList (cast expon')
                                 }
   where modulus' = fromList (cast modul)
 
+-- |Calculates static signature for string
 signUnsafe :: Signer -> String -> String
 signUnsafe signer = signWithBuffer signer (zeroBuffer signer)
 
+-- |Calculates randomized signature for string
 sign :: Signer -> String -> IO String
 sign signer message = do
     rndBuf <- randomBuffer signer
@@ -76,7 +78,7 @@ bufferLength signer = keyLength signer `div` byteSize
 
 buildSignature :: Signer -> Vector Int32 -> String
 buildSignature signer signature = concat
-    [ if V.length signature > pos `div` ( intSize `div` shortSize )
+    [ if significance signature > pos `div` ( intSize `div` shortSize )
       then
         let
           shift = if 0 == pos `mod` ( intSize `div` shortSize ) then 0 else shortSize :: Int

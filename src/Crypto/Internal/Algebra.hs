@@ -7,8 +7,8 @@ import           Data.Word    (Word32, Word64)
 
 import           Control.Lens (ix, (&), (.~))
 import           Data.Vector  (Vector, singleton, (!))
-import qualified Data.Vector  as V (init, last, length, null,
-                                    replicate, take, (++))
+import qualified Data.Vector  as V (init, last, length, null, replicate, take,
+                                    (++))
 
 longMask :: Int64
 longMask = 0xFFFFFFFF
