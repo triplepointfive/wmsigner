@@ -40,7 +40,7 @@ library
                       , split >= 0.2
                       , lens >= 4.4
     hs-source-dirs:     src
-    ghc-options:        -Wall -fno-warn-unused-do-bind -fno-warn-missing-signatures -O
+    ghc-options:        -Wall -fno-warn-unused-do-bind -fno-warn-missing-signatures
 
 Test-Suite test-WMSigner
     type:               exitcode-stdio-1.0
