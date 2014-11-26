@@ -1,14 +1,14 @@
-module Crypto.Internal.Montgomery where
+module Data.Digest.WebMoney.Montgomery where
 
-import           Control.Lens            (ix, (&), (.~))
-import           Data.Bits               (Bits, shiftL, shiftR, (.&.))
-import           Data.Int                (Int32, Int64)
+import           Control.Lens                 (ix, (&), (.~))
+import           Data.Bits                    (Bits, shiftL, shiftR, (.&.))
+import           Data.Int                     (Int32, Int64)
 
-import           Crypto.Internal.Algebra (logicalShiftR, normalize, remainder,
-                                          resize, significance)
+import           Data.Digest.WebMoney.Algebra (logicalShiftR, normalize,
+                                               remainder, resize, significance)
 
-import           Data.Vector             (Vector, cons, snoc, (!))
-import qualified Data.Vector             as V (head, length, replicate)
+import           Data.Vector                  (Vector, cons, snoc, (!))
+import qualified Data.Vector                  as V (head, length, replicate)
 
 intSize, longMask :: Int
 intSize = 32

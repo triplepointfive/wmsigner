@@ -1,12 +1,12 @@
 name:                   WMSigner
 version:                0.1.0.0
-synopsis:               Webmoney authentication module
+synopsis:               WebMoney authentication module
 description:
     Pure haskell implementation WMSigner authentication module.
     .
     Simple examples:
     .
-    > import Crypto.Webmoney
+    > import Data.Digest.Webmoney
     >
     > signer = newSigner (exponent :: [Word8) (modulus :: [Word8])
     >
@@ -23,10 +23,10 @@ build-type:             Simple
 cabal-version:          >=1.8
 
 library
-    exposed-modules:    Crypto.Webmoney
-    other-modules:      Crypto.Internal.Signer
-                        Crypto.Internal.Montgomery
-                        Crypto.Internal.Algebra
+    exposed-modules:    Data.Digest.WebMoney
+    other-modules:      Data.Digest.WebMoney.Signer
+                        Data.Digest.WebMoney.Montgomery
+                        Data.Digest.WebMoney.Algebra
     build-depends:      base >=4.6 && <4.8
                       , bytestring >= 0.10
                       , directory >= 1.0.0.0

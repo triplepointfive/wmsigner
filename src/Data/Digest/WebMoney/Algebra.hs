@@ -1,4 +1,4 @@
-module Crypto.Internal.Algebra where
+module Data.Digest.WebMoney.Algebra where
 
 import           Data.Bits    (Bits, bitSize, shiftL, shiftR, testBit, (.&.),
                                (.|.))

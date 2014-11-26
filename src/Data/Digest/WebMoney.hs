@@ -1,4 +1,4 @@
-module Crypto.Webmoney
+module Data.Digest.WebMoney
     (
       newSigner
     , sign
@@ -7,8 +7,8 @@ module Crypto.Webmoney
     )
     where
 
-import qualified Crypto.Internal.Signer as S (Signer, newSigner, sign,
-                                              signUnsafe)
+import qualified Data.Digest.WebMoney.Signer as S (Signer, newSigner, sign,
+                                                   signUnsafe)
 
 -- |Initializes new 'Signer' object, takes exponent and modulus as arguments
 newSigner = S.newSigner

@@ -1,26 +1,27 @@
 {-# LANGUAGE GADTs #-}
 
-module Crypto.Internal.Signer where
+module Data.Digest.WebMoney.Signer where
 
-import           Control.Monad              (replicateM)
-import           Data.Bits                  (shiftL, (.|.))
-import           Data.Char                  (ord)
-import           Data.Int                   (Int16, Int32)
-import           Data.List                  (foldl')
-import           Data.Word                  (Word8)
-import           System.Random              (randomIO)
-import           Text.Printf                (printf)
+import           Control.Monad                   (replicateM)
+import           Data.Bits                       (shiftL, (.|.))
+import           Data.Char                       (ord)
+import           Data.Int                        (Int16, Int32)
+import           Data.List                       (foldl')
+import           Data.Word                       (Word8)
+import           System.Random                   (randomIO)
+import           Text.Printf                     (printf)
 
-import           Crypto.Hash.MD4            (hash)
-import qualified Data.ByteString            as B (ByteString, elem, pack,
-                                                  unpack)
-import qualified Data.ByteString.Internal   as B (c2w)
-import           Data.List.Split            (chunksOf)
+import           Crypto.Hash.MD4                 (hash)
+import qualified Data.ByteString                 as B (ByteString, elem, pack,
+                                                       unpack)
+import qualified Data.ByteString.Internal        as B (c2w)
+import           Data.List.Split                 (chunksOf)
 
-import           Crypto.Internal.Algebra    (logicalShiftRight, significance)
-import           Crypto.Internal.Montgomery (exponentation)
+import           Data.Digest.WebMoney.Algebra    (logicalShiftRight,
+                                                  significance)
+import           Data.Digest.WebMoney.Montgomery (exponentation)
 
-import           Data.Vector                (Vector, fromList, (!))
+import           Data.Vector                     (Vector, fromList, (!))
 
 intSize, shortSize, byteSize, hashSize :: Int
 intSize   = 32

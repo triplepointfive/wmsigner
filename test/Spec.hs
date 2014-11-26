@@ -2,9 +2,9 @@ module Main where
 
 import           Data.Int        (Int32)
 
-import           Crypto.Internal.Algebra
-import           Crypto.Internal.Montgomery
-import           Crypto.Internal.Signer
+import           Data.Digest.WebMoney.Algebra
+import           Data.Digest.WebMoney.Montgomery
+import           Data.Digest.WebMoney.Signer
 
 import qualified Data.ByteString as B (pack)
 import           Data.Vector     (Vector, fromList)
